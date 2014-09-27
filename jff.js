@@ -7,7 +7,7 @@ $(document).ready(function () {
             pedalIndex = $input.data('pedal-index'),
             pedal      = pedalboard.pedals[pedalIndex],
             key        = $input.prop('name'),
-            value      = parseFloat($input.val()) || $input.val(),
+            value      = pedal[key].value || pedal[key],
             settings   = {};
 
         if (event.which === 38) {
@@ -59,7 +59,6 @@ function gotStream(stream) {
     window.mediaStreamSource = context.createMediaStreamSource(stream);
     $.each(pedals, function (i, pedal) {
         pedalboard.addPedal(pedal);
-        console.log('added a pedal');
     });
 
 }
