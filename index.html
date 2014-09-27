@@ -14,7 +14,9 @@
     </head>
     <body>
         <div class="container">
-            <h1>FreePedalBoard.com</h1>
+            <div class="page-header">
+                <h1>FreePedalBoard.com</h1>
+            </div>
             <div id="pedals"></div>
         </div>
         <div id="temaplates">
@@ -25,13 +27,18 @@
                             <h3 class="panel-title"><%= pedal.name %></h3>
                         </div>
                         <div class="panel-body">
-                            <ul>
-                            <% $.each(pedal, function (key, value) { %>
-                                <% if (key[0] === '_' && key.indexOf('ypass') === -1) { %>
-                                <li><%= key.slice(1) %>: <input type="text" data-pedal-index="<%= index %>" name="<%= key.slice(1) %>" value="<%= value %>"></li>
+                            <% $.each(pedal.defaults, function (key) { %>
+                                <% if (key.indexOf('bypass') === -1) { %>
+                                <div class="input-group">
+                                    <span class="input-group-addon">
+                                        <%= key %>: 
+                                    </span>
+                                    <input class="form-control" type="text" data-pedal-index="<%= index %>" name="<%= key %>" value="<%= (typeof(pedal[key]) === 'object') ? pedal[key].value : pedal[key] %>">
+                                </div>
                                 <% } %>
                             <% }) %>
-                            </ul>
+                            <hr />
+                            <button class="btn" data-pedal-index="<%= index %>" data-bypass="<%= !pedal.bypass %>">Bypass</button>
                         </div>
                     </div>
                 </div>

@@ -1,23 +1,67 @@
 $(document).ready(function () {
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
     navigator.getUserMedia({ audio: true }, gotStream, dontGotStream);
-    $('body').on('change', 'input[data-pedal-index]', function (event) {
+
+    $('body').on('keyup', 'input[data-pedal-index]', function (event) {
         var $input     = $(event.currentTarget),
             pedalIndex = $input.data('pedal-index'),
             pedal      = pedalboard.pedals[pedalIndex],
             key        = $input.prop('name'),
-            value      = $input.val();
+            value      = parseFloat($input.val()) || $input.val(),
+            settings   = {};
 
-        pedalboard.changePedalSettings(pedal, { key: value });
+        if (event.which === 38) {
+            value += 0.1;
+            $input.val(value);
+        } else if (event.which === 40) {
+            value -= 0.1;
+            $input.val(value);
+        }
+        settings[key] = value;
+        pedalboard.changePedalSettings(pedal, settings);
+    });
+
+    $('body').on('click', 'button[data-pedal-index]', function (event) {
+        var $button  = $(event.currentTarget),
+            index    = $button.data('pedal-index'),
+            pedal    = pedalboard.pedals[index],
+            bypass   = $button.data('bypass'),
+            settings = { bypass: bypass };
+
+        $button.data('bypass', !bypass);
+        if (bypass) {
+            $button.removeClass('btn-success');
+        } else {
+            $button.addClass('btn-success');
+        }
+        pedalboard.changePedalSettings(pedal, settings);
     });
 });
 
 function gotStream(stream) {
+    var pedals = [
+        'Chorus',
+        'Delay',
+        'Phaser',
+        'Overdrive',
+        'Compressor',
+        'Convolver',
+        'Filter',
+        'Cabinet',
+        'Tremolo',
+        'WahWah'
+    ];
+
     window.AudioContext      = window.AudioContext = window.AudioContext || window.webkitAudioContext;
     window.context           = new AudioContext();
     window.tuna              = new Tuna(context);
     pedalboard               = new Pedalboard();
     window.mediaStreamSource = context.createMediaStreamSource(stream);
+    $.each(pedals, function (i, pedal) {
+        pedalboard.addPedal(pedal);
+        console.log('added a pedal');
+    });
+
 }
 
 function dontGotStream() {
@@ -35,7 +79,11 @@ $.extend(Pedalboard.prototype, {
         $.each(settings, function (key, value) {
 
             if (pedal[key] !== undefined) {
-                pedal[key] = value;
+                if (typeof(pedal[key]) === 'object') {
+                    pedal[key].value = value;
+                } else {
+                    pedal[key] = value;
+                }
             }
         });
     },
@@ -44,7 +92,7 @@ $.extend(Pedalboard.prototype, {
             rate                    : 1.5,                           // 0.01 to 8+
             feedback                : 0.2,                           // 0 to 1+
             delay                   : 0.0045,                        // 0 to 1
-            bypass                  : 0                              // the value 1 starts the effect as bypassed, 0 or 1
+            bypass                  : 1                              // the value 1 starts the effect as bypassed, 0 or 1
         },
         Delay: {
             feedback                : 0.45,                          // 0 to 1+
@@ -52,7 +100,7 @@ $.extend(Pedalboard.prototype, {
             wetLevel                : 0.25,                          // 0 to 1+
             dryLevel                : 1,                             // 0 to 1+
             cutoff                  : 20,                            // cutoff frequency of the built in highpass-filter. 20 to 22050
-            bypass                  : 0
+            bypass                  : 1
         },
         Phaser: {
             rate                    : 1.2,                           // 0.01 to 8 is a decent range, but higher values are possible
@@ -60,14 +108,14 @@ $.extend(Pedalboard.prototype, {
             feedback                : 0.2,                           // 0 to 1+
             stereoPhase             : 30,                            // 0 to 180
             baseModulationFrequency : 700,                           // 500 to 1500
-            bypass                  : 0
+            bypass                  : 1
         },
         Overdrive: {
             outputGain              : 0.7,                           // 0 to 1+
             drive                   : 1,                             // 0 to 1
             curveAmount             : 0.7,                           // 0 to 1
             algorithmIndex          : 0,                             // 0 to 5, selects one of our drive algorithms
-            bypass                  : 0
+            bypass                  : 1
         },
         Compressor: {
             threshold               : 0.5,                           // -100 to 0
@@ -77,7 +125,7 @@ $.extend(Pedalboard.prototype, {
             ratio                   : 4,                             // 1 to 20
             knee                    : 5,                             // 0 to 40
             automakeup              : true,                          // true/false
-            bypass                  : 0
+            bypass                  : 1
         },
         Convolver: {
             highCut                 : 22050,                         // 20 to 22050
@@ -86,34 +134,34 @@ $.extend(Pedalboard.prototype, {
             wetLevel                : 1,                             // 0 to 1+
             level                   : 1,                             // 0 to 1+, adjusts total output of both wet and dry
             impulse                 : "impulses/impulse_rev.wav",    // the path to your impulse response
-            bypass                  : 0
+            bypass                  : 1
         },
         Filter: {
             frequency               : 20,                            // 20 to 22050
             Q                       : 1,                             // 0.001 to 100
             gain                    : 0,                             // -40 to 40
             filterType              : 0,                             // 0 to 7, corresponds to the filter types in the native filter node         : lowpass, highpass, bandpass, lowshelf, highshelf, peaking, notch, allpass in that order
-            bypass                  : 0
+            bypass                  : 1
         },
         Cabinet: {
             makeupGain              : 1,                             // 0 to 20
             impulsePath             : "impulses/impulse_guitar.wav", // path to your speaker impulse
-            bypass                  : 0
+            bypass                  : 1
         },
         Tremolo: {
             intensity               : 0.3,                           // 0 to 1
             rate                    : 0.1,                           // 0.001 to 8
             stereoPhase             : 0,                             // 0 to 180
-            bypass                  : 0
+            bypass                  : 1
         },
-        Wahwah: {
+        WahWah: {
             automode                : true,                          // true/false
             baseFrequency           : 0.5,                           // 0 to 1
             excursionOctaves        : 2,                             // 1 to 6
             sweep                   : 0.2,                           // 0 to 1
             resonance               : 10,                            // 1 to 100
             sensitivity             : 0.5,                           // -1 to 1
-            bypass                  : 0
+            bypass                  : 1
         }
     },
     disconnectPedals: function () {
@@ -126,10 +174,13 @@ $.extend(Pedalboard.prototype, {
             template,
             pedal,
             $div,
+            $row1 = $('<div class="row"></div>'), 
+            $row2 = $('<div class="row"></div>'), 
+            $row3 = $('<div class="row"></div>'),
             $pedals = $('#pedals');
 
-        $pedals.html('');
         if (!length) return;
+        $pedals.html('').append($row1).append($row2).append($row3);
         this.disconnectPedals();
         for (var i = 0; i < length; i++) {
             pedal = this.pedals[i];
@@ -146,7 +197,13 @@ $.extend(Pedalboard.prototype, {
             
             $div = $('<div></div>');
             $div.html(_.template(template)({ pedal: pedal, index: i }));
-            $pedals.append($div);
+            if (i < 4) {
+                $row1.append($div);
+            } else if (i < 8) {
+                $row2.append($div);
+            } else {
+                $row3.append($div);
+            }
         }
     },
     pedals: []

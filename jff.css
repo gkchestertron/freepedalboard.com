@@ -1,0 +1,9 @@
+#pedals input {
+    text-align: right;
+}
+#pedals button {
+    width: 100%;
+}
+#pedals .input-group-addon {
+    font-size: 10px;
+}
