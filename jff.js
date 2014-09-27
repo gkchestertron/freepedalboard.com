@@ -7,17 +7,21 @@ $(document).ready(function () {
             pedalIndex = $input.data('pedal-index'),
             pedal      = pedalboard.pedals[pedalIndex],
             key        = $input.prop('name'),
-            value      = pedal[key].value || pedal[key],
-            settings   = {};
+            value      = (pedal[key].value === undefined) ? pedal[key] : pedal[key].value,
+            settings   = {},
+            inc        = ((value * 10) % 10 === 0) ? 1 : 0.1;
 
-        if (event.which === 38) {
-            value += 0.1;
+        if (event.which === 38 && inc) {
+            value += inc;
+            settings[key] = value;
+            value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
             $input.val(value);
-        } else if (event.which === 40) {
-            value -= 0.1;
+        } else if (event.which === 40 && inc) {
+            value -= inc;
+            settings[key] = value;
+            value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
             $input.val(value);
         }
-        settings[key] = value;
         pedalboard.changePedalSettings(pedal, settings);
     });
 

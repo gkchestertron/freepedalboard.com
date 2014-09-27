@@ -43,11 +43,13 @@
                         <div class="panel-body">
                             <% $.each(pedal.defaults, function (key) { %>
                                 <% if (key.indexOf('bypass') === -1) { %>
+                                <% var value = (typeof(pedal[key]) === 'object') ? pedal[key].value : pedal[key] %>
+                                <% value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value %>
                                 <div class="input-group">
                                     <span class="input-group-addon">
                                         <%= key %>: 
                                     </span>
-                                    <input class="form-control" type="text" data-pedal-index="<%= index %>" name="<%= key %>" value="<%= (typeof(pedal[key]) === 'object') ? pedal[key].value : pedal[key] %>">
+                                    <input class="form-control" type="text" data-pedal-index="<%= index %>" name="<%= key %>" value="<%= value %>">
                                 </div>
                                 <% } %>
                             <% }) %>
