@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     navigator.getUserMedia({ audio: true }, gotStream, dontGotStream);
 
     $('body').on('keyup', 'input[data-pedal-index]', function (event) {
@@ -68,7 +68,7 @@ function gotStream(stream) {
 }
 
 function dontGotStream() {
-    alert('Get a real Web Browser, moron');
+    alert('Web Audio not supported in your browser. Please Download the latest Chrome or FireFox.');
 }
 
 Pedalboard = function () {};
