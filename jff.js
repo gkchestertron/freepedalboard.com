@@ -53,7 +53,7 @@ function gotStream(stream) {
         'Filter',
         'Cabinet',
         'Tremolo',
-        'WahWah'
+        // 'WahWah' //the sweep property blows this up in FF
     ];
 
     window.AudioContext      = window.AudioContext = window.AudioContext || window.webkitAudioContext;
