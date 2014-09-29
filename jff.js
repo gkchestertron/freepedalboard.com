@@ -1,74 +1,85 @@
 $(document).ready(function () {
-    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-    navigator.getUserMedia({ audio: true }, gotStream, dontGotStream);
+    init();
+    listener = new Listener({
+        events: {
+            'keyup input[data-pedal-index]'  : 'changePedalSettings',
+            'click button[data-pedal-index]' : 'bypassPedal',
+            'click button#user-media'        : 'getUserMedia',
+            'click #test'                    : 'test',
+            'click #off'                     : 'stopSamples',
+            'change #track-select'           : 'changeActiveBoard'
+        },
+        functions: {
+            bypassPedal: function (event) {
+                var $button    = $(event.currentTarget),
+                    index      = $button.data('pedal-index'),
+                    pedalboard = window.activeBoard,
+                    pedal      = pedalboard.pedals[index],
+                    bypass     = $button.data('bypass'),
+                    settings   = { bypass: bypass };
 
-    $('body').on('keyup', 'input[data-pedal-index]', function (event) {
-        var $input     = $(event.currentTarget),
-            pedalIndex = $input.data('pedal-index'),
-            pedal      = pedalboard.pedals[pedalIndex],
-            key        = $input.prop('name'),
-            value      = (pedal[key].value === undefined) ? pedal[key] : pedal[key].value,
-            settings   = {},
-            inc        = ((value * 10) % 10 === 0) ? 1 : 0.1;
+                $button.data('bypass', !bypass);
+                if (bypass) {
+                    $button.removeClass('btn-success');
+                } else {
+                    $button.addClass('btn-success');
+                }
+                pedalboard.changePedalSettings(pedal, settings);
+            },
+            changeActiveBoard: function (event) {
+                window.activeBoard = window.boards[$(event.currentTarget).val()];
+            },
+            changePedalSettings: function (event) {
+                var $input     = $(event.currentTarget),
+                    pedalIndex = $input.data('pedal-index'),
+                    pedal      = pedalboard.pedals[pedalIndex],
+                    key        = $input.prop('name'),
+                    value      = (pedal[key].value === undefined) ? pedal[key] : pedal[key].value,
+                    settings   = {},
+                    inc        = ((value * 10) % 10 === 0) ? 1 : 0.1;
 
-        if (event.which === 38 && inc) {
-            value += inc;
-            settings[key] = value;
-            value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
-            $input.val(value);
-        } else if (event.which === 40 && inc) {
-            value -= inc;
-            settings[key] = value;
-            value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
-            $input.val(value);
+                if (event.which === 38 && inc) {
+                    value += inc;
+                    settings[key] = value;
+                    value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
+                    $input.val(value);
+                } else if (event.which === 40 && inc) {
+                    value -= inc;
+                    settings[key] = value;
+                    value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
+                    $input.val(value);
+                }
+                pedalboard.changePedalSettings(pedal, settings);
+            },
+            getUserMedia: function (event) {
+                navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                navigator.getUserMedia({ audio: true }, gotStream, dontGotStream);
+            },
+            stopSamples: function (event) {
+                for (var board in window.boards) {
+                    if (board.indexOf('sample') !== -1) {
+                        window.boards[board].source.stop(0);
+                    }
+                }
+            },
+            test: function () {
+                console.log('test');
+            }
         }
-        pedalboard.changePedalSettings(pedal, settings);
-    });
-
-    $('body').on('click', 'button[data-pedal-index]', function (event) {
-        var $button  = $(event.currentTarget),
-            index    = $button.data('pedal-index'),
-            pedal    = pedalboard.pedals[index],
-            bypass   = $button.data('bypass'),
-            settings = { bypass: bypass };
-
-        $button.data('bypass', !bypass);
-        if (bypass) {
-            $button.removeClass('btn-success');
-        } else {
-            $button.addClass('btn-success');
-        }
-        pedalboard.changePedalSettings(pedal, settings);
-    });
+    }).delegateEvents();
 });
 
-function gotStream(stream) {
-    var pedals = [
-        'Chorus',
-        'Delay',
-        'Phaser',
-        'Overdrive',
-        'Compressor',
-        'Convolver',
-        'Filter',
-        'Cabinet',
-        'Tremolo',
-        // 'WahWah' //the sweep property blows this up in FF
-    ];
-
-    window.AudioContext      = window.AudioContext = window.AudioContext || window.webkitAudioContext;
-    window.context           = new AudioContext();
-    window.tuna              = new Tuna(context);
-    pedalboard               = new Pedalboard();
-    window.mediaStreamSource = context.createMediaStreamSource(stream);
-    $.each(pedals, function (i, pedal) {
-        pedalboard.addPedal(pedal);
-    });
-    bufferLoader = new BufferLoader(
+function init() {
+    window.boards       = {};
+    window.AudioContext = window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    window.context      = new AudioContext();
+    window.tuna         = new Tuna(context);
+    bufferLoader        = new BufferLoader(
         context,
         [
             '/samples/jasmine_guitar_1.mp3',
             '/samples/jasmine_guitar_2.mp3',
+            '/samples/vocal.mp3',
         ],
         finishedLoading
     );
@@ -76,52 +87,30 @@ function gotStream(stream) {
     bufferLoader.load();
 
     function finishedLoading(bufferList) {
-        // Create two sources and play them both together.
-        pedalboard.sample_1 = context.createBufferSource();
-        pedalboard.sample_2 = context.createBufferSource();
-        pedalboard.sample_1.buffer = bufferList[0];
-        pedalboard.sample_2.buffer = bufferList[1];
-        pedalboard.sample_1.loop = true;
-        pedalboard.sample_2.loop = true;
-
-        pedalboard.sample_1.connect(context.destination);
-        pedalboard.sample_2.connect(pedalboard.pedals[0].input);
-
-        pedalboard.sample_1.start(0);
-        pedalboard.sample_2.start(0);
-
-        $('body').on('click', 'a#off', function (event) {
-            pedalboard.sample_1.stop(0);
-            pedalboard.sample_2.stop(0);
-        });
-
+        for (var buffer in bufferList) {
+            var sample    = context.createBufferSource();
+            var boardName = 'sample_' + buffer;
+            sample.buffer = bufferList[buffer];
+            new Pedalboard(sample, boardName);
+            sample.start(0);
+            $('#track-selector').html(_.template($('#track-selector-template')));
+        }
     }
 }
 
-function dontGotStream() {
-    alert('You must allow access to an input to use the demo.');
+function gotStream(stream) {
+    window.mediaStreamSource = context.createMediaStreamSource(stream);
+    new Pedalboard(window.mediaStreamSource, 'live');
 }
-
-Pedalboard = function () {};
-$.extend(Pedalboard.prototype, {
-    addPedal: function (pedal) {
-        this.disconnectPedals();
-        this.pedals.push(new tuna[pedal](this.defaults[pedal]));
-        this.hookup();
-    },
-    changePedalSettings: function (pedal, settings) {
-        $.each(settings, function (key, value) {
-
-            if (pedal[key] !== undefined) {
-                if (typeof(pedal[key]) === 'object') {
-                    pedal[key].value = value;
-                } else {
-                    pedal[key] = value;
-                }
-            }
-        });
-    },
-    defaults : {
+function dontGotStream() {
+    alert('You must allow access to an input to use use a live feed.');
+}
+Pedalboard = function (source, name) {
+    this.source         = source;
+    this.name           = name;
+    this.pedals         = [];
+    window.boards[name] = this;
+    this.defaults = {
         Chorus: {
             rate                    : 1.5,                           // 0.01 to 8+
             feedback                : 0.2,                           // 0 to 1+
@@ -197,7 +186,28 @@ $.extend(Pedalboard.prototype, {
             sensitivity             : 0.5,                           // -1 to 1
             bypass                  : 1
         }
+    }
+    this.init();
+}
+$.extend(Pedalboard.prototype, {
+    addPedal: function (pedal) {
+        this.disconnectPedals();
+        this.pedals.push(new tuna[pedal](this.defaults[pedal]));
+        this.hookup();
     },
+    changePedalSettings: function (pedal, settings) {
+        $.each(settings, function (key, value) {
+
+            if (pedal[key] !== undefined) {
+                if (typeof(pedal[key]) === 'object') {
+                    pedal[key].value = value;
+                } else {
+                    pedal[key] = value;
+                }
+            }
+        });
+    },
+    
     disconnectPedals: function () {
         $.each(this.pedals, function (i, pedal) {
             pedal.disconnect(0);
@@ -222,7 +232,7 @@ $.extend(Pedalboard.prototype, {
                 pedal.connect(context.destination);
             }
             if (i === 0) {
-                // window.mediaStreamSource.connect(pedal.input);
+                this.source.connect(pedal.input);
             }
             if (i < length - 1) {
                 pedal.connect(this.pedals[i + 1].input);
@@ -230,7 +240,7 @@ $.extend(Pedalboard.prototype, {
             template = $('#pedal-template').html();
             
             $div = $('<div></div>');
-            $div.html(_.template(template)({ pedal: pedal, index: i }));
+            $div.html(_.template(template)({ pedal: pedal, index: i, boardName: this.name }));
             if (i < 4) {
                 $row1.append($div);
             } else if (i < 8) {
@@ -239,53 +249,84 @@ $.extend(Pedalboard.prototype, {
                 $row3.append($div);
             }
         }
+        window.activeBoard = this;
     },
-    pedals: []
+    init: function () {
+        var self = this,
+            pedals = [
+            'Chorus', 'Delay', 'Phaser', 'Overdrive', 'Compressor', 'Convolver',
+            'Filter', 'Cabinet', 'Tremolo', // 'WahWah' //the sweep property blows this up in FF
+        ];
+
+        $.each(pedals, function (i, pedal) {
+            self.addPedal(pedal);
+        });
+    }
 });
 
+// Listener class
+function Listener(options) {
+    this.events = options.events;
+    for (var func in options.functions) {
+        this[func] = options.functions[func];
+    }
+    return this;
+}
+Listener.prototype.delegateEvents = function() {
+    for (var event in this.events) {
+        var split    = event.split(' '),
+            trigger  = split[0],
+            selector = split.slice(1).join(' '),
+            func     = this.events[event];
+
+        $('body').on(trigger, selector, this[func]);
+    }
+}
+
+// BufferLoader class
 function BufferLoader(context, urlList, callback) {
-  this.context = context;
-  this.urlList = urlList;
-  this.onload = callback;
-  this.bufferList = new Array();
-  this.loadCount = 0;
+    this.context    = context;
+    this.urlList    = urlList;
+    this.onload     = callback;
+    this.bufferList = new Array();
+    this.loadCount  = 0;
 }
 
 BufferLoader.prototype.loadBuffer = function(url, index) {
-  // Load buffer asynchronously
-  var request = new XMLHttpRequest();
-  request.open("GET", url, true);
-  request.responseType = "arraybuffer";
+    // Load buffer asynchronously
+    var request = new XMLHttpRequest();
+    request.open("GET", url, true);
+    request.responseType = "arraybuffer";
 
-  var loader = this;
+    var loader = this;
 
-  request.onload = function() {
-    // Asynchronously decode the audio file data in request.response
-    loader.context.decodeAudioData(
-      request.response,
-      function(buffer) {
-        if (!buffer) {
-          alert('error decoding file data: ' + url);
-          return;
-        }
-        loader.bufferList[index] = buffer;
-        if (++loader.loadCount == loader.urlList.length)
-          loader.onload(loader.bufferList);
-      },
-      function(error) {
-        console.error('decodeAudioData error', error);
-      }
-    );
-  }
+    request.onload = function() {
+        // Asynchronously decode the audio file data in request.response
+        loader.context.decodeAudioData(
+            request.response,
+            function(buffer) {
+                if (!buffer) {
+                    alert('error decoding file data: ' + url);
+                    return;
+                }
+                loader.bufferList[index] = buffer;
+                if (++loader.loadCount == loader.urlList.length)
+                    loader.onload(loader.bufferList);
+            },
+            function(error) {
+                console.error('decodeAudioData error', error);
+            }
+        );
+    }
 
-  request.onerror = function() {
-    alert('BufferLoader: XHR error');
-  }
+    request.onerror = function() {
+        alert('BufferLoader: XHR error');
+    }
 
-  request.send();
+    request.send();
 }
 
 BufferLoader.prototype.load = function() {
-  for (var i = 0; i < this.urlList.length; ++i)
-  this.loadBuffer(this.urlList[i], i);
+    for (var i = 0; i < this.urlList.length; ++i)
+    this.loadBuffer(this.urlList[i], i);
 }
