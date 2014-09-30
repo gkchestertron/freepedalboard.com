@@ -50,6 +50,9 @@ $(document).ready(function () {
                     settings[key] = value;
                     value = (parseFloat(value) && (value * 10000) % 10000 !== 0) ? value.toFixed(4) : value;
                     $input.val(value);
+                } else {
+                    value = $input.val();
+                    settings[key] = value;
                 }
                 pedalboard.changePedalSettings(pedal, settings);
             },
@@ -209,13 +212,8 @@ $.extend(Pedalboard.prototype, {
     },
     changePedalSettings: function (pedal, settings) {
         $.each(settings, function (key, value) {
-
             if (pedal[key] !== undefined) {
-                if (typeof(pedal[key]) === 'object') {
-                    pedal[key].value = value;
-                } else {
-                    pedal[key] = value;
-                }
+                pedal[key] = value;
             }
         });
     },
