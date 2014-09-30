@@ -7,7 +7,7 @@ $(document).ready(function () {
             'click button#user-media'        : 'getUserMedia',
             'click #test'                    : 'test',
             'click #off'                     : 'stopSamples',
-            'change #track-select'           : 'changeActiveBoard'
+            'click .track-select'            : 'changeActiveBoard'
         },
         functions: {
             bypassPedal: function (event) {
@@ -27,11 +27,13 @@ $(document).ready(function () {
                 pedalboard.changePedalSettings(pedal, settings);
             },
             changeActiveBoard: function (event) {
-                window.activeBoard = window.boards[$(event.currentTarget).val()];
+                var $button = $(event.currentTarget);
+                window.boards[$button.val()].hookup();
             },
             changePedalSettings: function (event) {
                 var $input     = $(event.currentTarget),
                     pedalIndex = $input.data('pedal-index'),
+                    pedalboard = window.activeBoard,
                     pedal      = pedalboard.pedals[pedalIndex],
                     key        = $input.prop('name'),
                     value      = (pedal[key].value === undefined) ? pedal[key] : pedal[key].value,
@@ -52,12 +54,18 @@ $(document).ready(function () {
                 pedalboard.changePedalSettings(pedal, settings);
             },
             getUserMedia: function (event) {
+                var $button = $(event.currentTarget);
+
+                $button.remove();
                 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
                 navigator.getUserMedia({ audio: true }, gotStream, dontGotStream);
             },
             stopSamples: function (event) {
+                var $button = $(event.currentTarget);
+
+                $button.remove();
                 for (var board in window.boards) {
-                    if (board.indexOf('sample') !== -1) {
+                    if (window.boards[board].source.stop) {
                         window.boards[board].source.stop(0);
                     }
                 }
@@ -70,17 +78,19 @@ $(document).ready(function () {
 });
 
 function init() {
+    var files           = [
+            '/samples/guitar_1.mp3',
+            '/samples/guitar_2.mp3',
+            '/samples/vocal.mp3',
+        ];
+
     window.boards       = {};
     window.AudioContext = window.AudioContext = window.AudioContext || window.webkitAudioContext;
     window.context      = new AudioContext();
     window.tuna         = new Tuna(context);
     bufferLoader        = new BufferLoader(
         context,
-        [
-            '/samples/jasmine_guitar_1.mp3',
-            '/samples/jasmine_guitar_2.mp3',
-            '/samples/vocal.mp3',
-        ],
+        files,
         finishedLoading
     );
 
@@ -89,12 +99,14 @@ function init() {
     function finishedLoading(bufferList) {
         for (var buffer in bufferList) {
             var sample    = context.createBufferSource();
-            var boardName = 'sample_' + buffer;
+            var boardName = files[buffer].split('/')[2].split('.')[0];
             sample.buffer = bufferList[buffer];
+            sample.loop = true;
             new Pedalboard(sample, boardName);
             sample.start(0);
-            $('#track-selector').html(_.template($('#track-selector-template')));
+            $('#track-selector').html(_.template($('#track-selector-template').html()));
         }
+        window.boards.guitar_1.hookup();
     }
 }
 
@@ -214,14 +226,15 @@ $.extend(Pedalboard.prototype, {
         });
     },
     hookup: function () {
-        var length = this.pedals.length,
+        var length    = this.pedals.length,
             template,
             pedal,
             $div,
-            $row1 = $('<div class="row"></div>'), 
-            $row2 = $('<div class="row"></div>'), 
-            $row3 = $('<div class="row"></div>'),
-            $pedals = $('#pedals');
+            $row1     = $('<div class = "row"></div>'),
+            $row2     = $('<div class = "row"></div>'),
+            $row3     = $('<div class = "row"></div>'),
+            $pedals   = $('#pedals'),
+            $button;
 
         if (!length) return;
         $pedals.html('').append($row1).append($row2).append($row3);
@@ -250,6 +263,9 @@ $.extend(Pedalboard.prototype, {
             }
         }
         window.activeBoard = this;
+        $button = $('button[value="' + this.name + '"]');
+        $('button.track-select').removeClass('active');
+        $button.addClass('active');
     },
     init: function () {
         var self = this,

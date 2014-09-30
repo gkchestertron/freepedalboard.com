@@ -15,13 +15,13 @@
     <body>
         <div class="container">
             <div class="page-header">
-                <button id="user-media">Use Live Input</button>
                 <h1>FreePedalBoard.com <small>plug in and make some noise</small></h1>
-            <p>Try different effects on the sample or allow the browser to use your input and plug in your own guitar. Then click the bypass buttons to turn on each effect. Only works in modern browsers.</p>
-            <a id="off" href="#"><h4>Click here to Stop Sample Track</h4></a>
-            <div id="track-selector"></div>
+            <p>Try different effects on the sample tracks or allow the browser to use your input and plug in your own guitar. Then click the bypass buttons to turn on each effect. Only works in modern browsers - best in Chrome.</p>
+            <a id="off" class="btn btn-danger" href="#">Stop Sample Tracks</a>
+            <button class="btn btn-success" id="user-media">Use Live Input</button>
             </div>
-            <div id="pedals"><div class="well"><h4>The pedals will show up here once you allow FreePedalBoard.com to use your audio input.</h4></div></div>
+            <div id="track-selector"></div>
+            <div id="pedals"><div class="well"><h4>If the pedals don't appear here in a moment, you probably need to download the latest Chrome or Firefox.</h4></div></div>
             <hr />
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -57,17 +57,16 @@
                                 <% } %>
                             <% }) %>
                             <hr />
-                            <button class="btn" data-board-name="<%= boardName %>" data-pedal-index="<%= index %>" data-bypass="<%= !pedal.bypass %>">Bypass</button>
+                            <button class="btn <%= (pedal.bypass) ? '' : 'btn-success' %>" data-board-name="<%= boardName %>" data-pedal-index="<%= index %>" data-bypass="<%= !pedal.bypass %>">Bypass</button>
                         </div>
                     </div>
                 </div>
             </script>
             <script type="text/template" id="track-selector-template">
-                <select id="track-select">
+                Change Effects for: 
                     <% for (var board in window.boards) { %>
-                    <option value="<%= board %>"><%= board %></option>
+                    <button class="track-select btn btn-default" value="<%= board %>"><%= board %></button>
                     <% } %>
-                </select>
             </script>
         </div>
     </body>
